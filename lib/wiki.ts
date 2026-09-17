@@ -32,6 +32,14 @@ export type TocItem = {
   id: string;
 };
 
+export type WikiProfile = {
+  name: string;
+  subtitle: string;
+  image: string;
+  fields: Array<{ label: string; value: string }>;
+  links: Array<{ label: string; href: string; text: string }>;
+};
+
 export type WikiConfig = {
   siteName: string;
   siteDescription: string;
@@ -57,6 +65,7 @@ export type WikiConfig = {
     showTableOfContents: boolean;
     enableInternalLinks: boolean;
   };
+  profile: WikiProfile;
 };
 
 export const defaultConfig: WikiConfig = {
@@ -84,6 +93,13 @@ export const defaultConfig: WikiConfig = {
     showTableOfContents: true,
     enableInternalLinks: true,
   },
+  profile: {
+    name: "김민혁",
+    subtitle: "",
+    image: "",
+    fields: [],
+    links: [],
+  },
 };
 
 function parseFrontmatter(raw: string) {
@@ -102,6 +118,7 @@ function mergeConfig(input: Partial<WikiConfig>): WikiConfig {
     appearance: { ...defaultConfig.appearance, ...(input.appearance ?? {}) },
     navigation: { ...defaultConfig.navigation, ...(input.navigation ?? {}) },
     wiki: { ...defaultConfig.wiki, ...(input.wiki ?? {}) },
+    profile: { ...defaultConfig.profile, ...(input.profile ?? {}) },
   };
 }
 
