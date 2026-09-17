@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
 import "highlight.js/styles/github-dark.css";
+import RightRail from "@/components/RightRail";
 import SearchBox from "@/components/SearchBox";
 import ThemeToggle from "@/components/ThemeToggle";
 import { getAllDocuments, getCategories, getWikiConfig } from "@/lib/wiki";
@@ -25,9 +26,13 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     "--link": config.theme.linkColor,
     "--content-max": config.theme.maxContentWidth,
   } as React.CSSProperties;
+  const initialTheme = config.appearance.defaultTheme === "system" ? undefined : config.appearance.defaultTheme;
+  const focusSlugs = new Set(["profile", "personality", "relationships", "preferences", "music"]);
+  const focusDocs = docs.filter((doc) => focusSlugs.has(doc.slug));
+  const otherDocs = docs.filter((doc) => doc.slug !== "index" && !focusSlugs.has(doc.slug));
 
   return (
-    <html lang="ko" suppressHydrationWarning>
+    <html lang="ko" suppressHydrationWarning data-theme={initialTheme}>
       <body style={cssVars} className={`${config.appearance.roundedCorners ? "rounded-ui" : ""} ${config.appearance.compactLayout ? "compact-ui" : ""}`.trim()}>
         <header className="topbar">
           <div className="topbar-inner">
@@ -35,19 +40,27 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               <span className="brand-mark">W</span>
               <span>{config.siteName}</span>
             </Link>
+
+            <nav className="top-links" aria-label="빠른 메뉴">
+              {config.navigation.showRecentChanges && <Link href="/recent">◷ 최근 변경</Link>}
+              <Link href="/wiki/personality">☁ 성격</Link>
+              <Link href="/wiki/relationships">♙ 인간관계</Link>
+            </nav>
+
             {config.navigation.showSearch && <SearchBox docs={searchDocs} />}
+
             <nav className="top-actions" aria-label="상단 메뉴">
-              {config.navigation.showRecentChanges && <Link href="/recent">최근 수정</Link>}
               <ThemeToggle defaultTheme={config.appearance.defaultTheme} />
             </nav>
+
             <details className="mobile-menu">
               <summary aria-label="메뉴 열기">☰</summary>
               <div className="mobile-menu-panel">
                 <Link href="/">대문</Link>
-                {config.navigation.showRecentChanges && <Link href="/recent">최근 수정</Link>}
-                {categories.map((category) => (
-                  <Link key={category.name} href={`/category/${encodeURIComponent(category.name)}`}>{category.name}</Link>
-                ))}
+                <Link href="/wiki/profile">프로필</Link>
+                <Link href="/wiki/personality">성격</Link>
+                <Link href="/wiki/relationships">인간관계</Link>
+                {config.navigation.showRecentChanges && <Link href="/recent">최근 변경</Link>}
               </div>
             </details>
           </div>
@@ -60,14 +73,22 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
                 <section>
                   <h2>wikiboutme</h2>
                   <Link href="/">대문</Link>
-                  {config.navigation.showRecentChanges && <Link href="/recent">최근 수정</Link>}
+                  {config.navigation.showRecentChanges && <Link href="/recent">최근 변경</Link>}
                 </section>
                 <section>
-                  <h2>문서</h2>
-                  {docs.filter((doc) => doc.slug !== "index").map((doc) => (
+                  <h2>나에 대해</h2>
+                  {focusDocs.map((doc) => (
                     <Link key={doc.slug} href={`/wiki/${doc.slug}`}>{doc.title}</Link>
                   ))}
                 </section>
+                {otherDocs.length > 0 && (
+                  <section>
+                    <h2>기타 기록</h2>
+                    {otherDocs.map((doc) => (
+                      <Link key={doc.slug} href={`/wiki/${doc.slug}`}>{doc.title}</Link>
+                    ))}
+                  </section>
+                )}
                 {config.navigation.showCategories && (
                   <section>
                     <h2>분류</h2>
@@ -83,6 +104,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           )}
 
           <main className="main-column">{children}</main>
+          <RightRail docs={docs} />
         </div>
 
         <footer className="site-footer">
