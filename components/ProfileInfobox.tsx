@@ -1,3 +1,4 @@
+import Image from "next/image";
 import styles from "./ProfileInfobox.module.css";
 import type { WikiProfile } from "@/lib/wiki";
 
@@ -6,11 +7,14 @@ export default function ProfileInfobox({ profile }: { profile: WikiProfile }) {
     <aside className={styles.card} aria-label={`${profile.name} 프로필`}>
       <div className={styles.visual}>
         {profile.image ? (
-          <div
+          <Image
             className={styles.photo}
-            role="img"
-            aria-label={`${profile.name} 프로필 사진`}
-            style={{ backgroundImage: `url(${profile.image})` }}
+            src={profile.image}
+            alt={`${profile.name} 프로필 이미지`}
+            width={800}
+            height={600}
+            sizes="(max-width: 760px) 100vw, 340px"
+            priority
           />
         ) : (
           <div className={styles.placeholder} aria-label="프로필 사진 미등록">
