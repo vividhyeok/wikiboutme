@@ -215,7 +215,15 @@ export function extractToc(markdown: string): TocItem[] {
 }
 
 export async function renderMarkdown(markdown: string) {
-  const source = preprocessWikiLinks(markdown, getAllDocuments());
+  const notes: string[] = [];
+  const withNotes = markdown.replace(/\[각주:\s*([^\]]+)\]/g, (_, note) => {
+    notes.push(String(note).trim());
+    return `[[${notes.length}]](#각주 "${String(note).replace(/"/g, "'")}")`;
+  });
+  const footnotes = notes.length
+    ? `\n\n## 각주\n\n${notes.map((note, index) => `${index + 1}. ${note}`).join("\n")}`
+    : "";
+  const source = preprocessWikiLinks(withNotes + footnotes, getAllDocuments());
   const result = await unified()
     .use(remarkParse)
     .use(remarkGfm)

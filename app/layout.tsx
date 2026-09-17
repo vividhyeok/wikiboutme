@@ -5,119 +5,35 @@ import "highlight.js/styles/github-dark.css";
 import RightRail from "@/components/RightRail";
 import SearchBox from "@/components/SearchBox";
 import ThemeToggle from "@/components/ThemeToggle";
-import { getAllDocuments, getCategories, getWikiConfig } from "@/lib/wiki";
+import { getAllDocuments, getWikiConfig } from "@/lib/wiki";
 
 export async function generateMetadata(): Promise<Metadata> {
   const config = getWikiConfig();
-  return {
-    title: { default: config.siteName, template: `%s - ${config.siteName}` },
-    description: config.siteDescription,
-    openGraph: { title: config.siteName, description: config.siteDescription, type: "website" },
-  };
+  return { title: { default: config.siteName, template: `%s - ${config.siteName}` }, description: config.siteDescription };
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const config = getWikiConfig();
   const docs = getAllDocuments();
-  const categories = getCategories();
   const searchDocs = docs.map(({ slug, title, description, aliases, excerpt }) => ({ slug, title, description, aliases, excerpt }));
-  const cssVars = {
-    "--accent": config.theme.accentColor,
-    "--link": config.theme.linkColor,
-    "--content-max": config.theme.maxContentWidth,
-  } as React.CSSProperties;
-  const initialTheme = config.appearance.defaultTheme === "system" ? undefined : config.appearance.defaultTheme;
-  const focusSlugs = new Set(["profile", "personality", "relationships", "preferences", "music"]);
-  const focusDocs = docs.filter((doc) => focusSlugs.has(doc.slug));
-  const otherDocs = docs.filter((doc) => doc.slug !== "index" && !focusSlugs.has(doc.slug));
+  const cssVars = { "--link": config.theme.linkColor, "--content-max": config.theme.maxContentWidth } as React.CSSProperties;
 
   return (
-    <html lang="ko" suppressHydrationWarning data-theme={initialTheme}>
-      <body style={cssVars} className={`${config.appearance.roundedCorners ? "rounded-ui" : ""} ${config.appearance.compactLayout ? "compact-ui" : ""}`.trim()}>
+    <html lang="ko" suppressHydrationWarning data-theme={config.appearance.defaultTheme}>
+      <body style={cssVars}>
         <header className="topbar">
           <div className="topbar-inner">
-            <Link href="/" className="brand" aria-label="wikiboutme 홈">
-              <span className="brand-mark">W</span>
-              <span>{config.siteName}</span>
-            </Link>
-
-            <nav className="top-links" aria-label="빠른 메뉴">
-              {config.navigation.showRecentChanges && <Link href="/recent">◷ 최근 변경</Link>}
-              <Link href="/wiki/personality">☁ 성격</Link>
-              <Link href="/wiki/relationships">♙ 인간관계</Link>
-            </nav>
-
-            {config.navigation.showSearch && <SearchBox docs={searchDocs} />}
-
-            <nav className="top-actions" aria-label="상단 메뉴">
-              <ThemeToggle defaultTheme={config.appearance.defaultTheme} />
-            </nav>
-
-            <details className="mobile-menu">
-              <summary aria-label="메뉴 열기">☰</summary>
-              <div className="mobile-menu-panel">
-                <Link href="/">대문</Link>
-                <Link href="/wiki/profile">프로필</Link>
-                <Link href="/wiki/personality">성격</Link>
-                <Link href="/wiki/relationships">인간관계</Link>
-                {config.navigation.showRecentChanges && <Link href="/recent">최근 변경</Link>}
-              </div>
-            </details>
+            <Link href="/" className="brand"><span className="brand-mark">W</span><span>{config.siteName}</span></Link>
+            <nav className="top-links"><span>최근 변경</span><span>최근 토론</span></nav>
+            <SearchBox docs={searchDocs} />
+            <ThemeToggle defaultTheme={config.appearance.defaultTheme} />
           </div>
         </header>
-
         <div className="site-shell">
-          {config.navigation.showSidebar && (
-            <aside className="sidebar">
-              <nav aria-label="위키 탐색">
-                <section>
-                  <h2>wikiboutme</h2>
-                  <Link href="/">대문</Link>
-                  {config.navigation.showRecentChanges && <Link href="/recent">최근 변경</Link>}
-                </section>
-                <section>
-                  <h2>나에 대해</h2>
-                  {focusDocs.map((doc) => (
-                    <Link key={doc.slug} href={`/wiki/${doc.slug}`}>{doc.title}</Link>
-                  ))}
-                </section>
-                {otherDocs.length > 0 && (
-                  <section>
-                    <h2>기타 기록</h2>
-                    {otherDocs.map((doc) => (
-                      <Link key={doc.slug} href={`/wiki/${doc.slug}`}>{doc.title}</Link>
-                    ))}
-                  </section>
-                )}
-                {config.navigation.showCategories && (
-                  <section>
-                    <h2>분류</h2>
-                    {categories.map((category) => (
-                      <Link key={category.name} href={`/category/${encodeURIComponent(category.name)}`}>
-                        {category.name} <small>{category.count}</small>
-                      </Link>
-                    ))}
-                  </section>
-                )}
-              </nav>
-            </aside>
-          )}
-
           <main className="main-column">{children}</main>
-          <RightRail docs={docs} />
+          <RightRail />
         </div>
-
-        <footer className="site-footer">
-          <div>
-            <span>{config.siteName}</span>
-            <span>Markdown + GitHub 기반 개인 위키</span>
-          </div>
-          <div>
-            <a href="https://github.com/vividhyeok/wikiboutme/edit/main/content/_config.md" target="_blank" rel="noreferrer">위키 설정</a>
-            <a href="https://github.com/vividhyeok/wikiboutme/blob/main/content/_editing-guide.md" target="_blank" rel="noreferrer">작성 가이드</a>
-            <a href="https://github.com/vividhyeok/wikiboutme" target="_blank" rel="noreferrer">GitHub</a>
-          </div>
-        </footer>
+        <footer className="site-footer"><span>{config.siteName}</span><span>이 문서의 내용은 작성 시점에 따라 달라질 수 있습니다.</span></footer>
       </body>
     </html>
   );

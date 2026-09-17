@@ -1,44 +1,27 @@
+"use client";
+
 import Image from "next/image";
-import Link from "next/link";
-import type { WikiDocument } from "@/lib/wiki";
+import { useEffect, useState } from "react";
 
-const keywords = ["ENTP", "5w6", "인간관계", "취향", "음악", "애니", "AI", "스케이트보드"];
+const ads = [
+  { src: "/ad-kimchi.png", alt: "깊고 진한 김치의 맛 광고" },
+  { src: "/ad-bookcafe.png", alt: "책과 커피가 머무는 공간 광고" },
+  { src: "/ad-notebook.png", alt: "가볍고 빠른 노트북 광고" },
+];
 
-export default function RightRail({ docs }: { docs: WikiDocument[] }) {
-  const recent = [...docs]
-    .filter((doc) => doc.slug !== "index")
-    .sort((a, b) => b.updated.localeCompare(a.updated) || a.order - b.order)
-    .slice(0, 7);
-
+export default function RightRail() {
+  const [index, setIndex] = useState(0);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setIndex(Math.floor(Math.random() * ads.length)), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+  const ad = ads[index];
   return (
-    <aside className="right-rail" aria-label="보조 정보">
-      <section className="rail-card">
-        <div className="rail-title">주요 키워드 <span>›</span></div>
-        <ol className="keyword-list">
-          {keywords.map((keyword, index) => (
-            <li key={keyword}>
-              <span>{index + 1}</span>
-              <Link href={`/wiki/personality#${index < 2 ? (index === 0 ? "1-mbti" : "2-에니어그램") : "3-성향-키워드"}`}>{keyword}</Link>
-            </li>
-          ))}
-        </ol>
-      </section>
-
-      <section className="rail-card">
-        <div className="rail-title">최근 변경 <span>›</span></div>
-        <div className="rail-recent">
-          {recent.map((doc) => (
-            <Link key={doc.slug} href={`/wiki/${doc.slug}`}>
-              <span>{doc.title}</span>
-              <time>{doc.updated ? doc.updated.slice(5) : "-"}</time>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      <a className="rail-ad" href="https://blog.naver.com/vividm00d" target="_blank" rel="noreferrer" aria-label="Vivid Mood 블로그 열기">
-        <Image src="/sidebar-ad.svg" alt="Vivid Mood archive" width={300} height={600} sizes="280px" />
-      </a>
+    <aside className="right-rail" aria-label="광고">
+      <div className="rail-ad-label">ADVERTISEMENT</div>
+      <div className="rail-ad">
+        <Image src={ad.src} alt={ad.alt} width={684} height={2048} sizes="260px" priority />
+      </div>
     </aside>
   );
 }
