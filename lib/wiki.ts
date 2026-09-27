@@ -30,6 +30,7 @@ export type TocItem = {
   level: number;
   text: string;
   id: string;
+  number: string;
 };
 
 export type WikiProfile = {
@@ -125,7 +126,6 @@ function mergeConfig(input: Partial<WikiConfig>): WikiConfig {
 export function getWikiConfig(): WikiConfig {
   const configPath = path.join(CONTENT_DIR, "_config.md");
   if (!fs.existsSync(configPath)) return defaultConfig;
-
   try {
     const { data } = parseFrontmatter(fs.readFileSync(configPath, "utf8"));
     return mergeConfig(data as Partial<WikiConfig>);
@@ -136,8 +136,8 @@ export function getWikiConfig(): WikiConfig {
 
 function stripMarkdown(markdown: string) {
   return markdown
-    .replace(/```[\s\S]*?```/g, " ")
-    .replace(/`([^`]+)`/g, "$1")
+    .replace(/\x60{3}[\s\S]*?\x60{3}/g, " ")
+    .replace(/\x60([^\x60]+)\x60/g, "$1")
     .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
     .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
     .replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, slug, label) => label || slug)
@@ -148,7 +148,6 @@ function stripMarkdown(markdown: string) {
 
 export function getAllDocuments(): WikiDocument[] {
   if (!fs.existsSync(CONTENT_DIR)) return [];
-
   return fs
     .readdirSync(CONTENT_DIR)
     .filter((file) => file.endsWith(".md") && !file.startsWith("_"))
@@ -194,36 +193,70 @@ function preprocessWikiLinks(markdown: string, docs: WikiDocument[]) {
   return markdown.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, rawSlug, rawLabel) => {
     const slug = String(rawSlug).trim();
     const label = String(rawLabel || rawSlug).trim();
-    const href = slug === "index" ? "/" : `/wiki/${encodeURIComponent(slug)}`;
+    const href = slug === "index" ? "/" : "/wiki/" + encodeURIComponent(slug);
     return existing.has(slug)
-      ? `[${label}](${href})`
-      : `[${label}](${href} "아직 만들어지지 않은 문서")`;
+      ? "[" + label + "](" + href + ")"
+      : "[" + label + "](" + href + ' "아직 만들어지지 않은 문서")';
   });
+}
+
+function numberWikiHeadings(markdown: string) {
+  const counters = [0, 0, 0];
+  return markdown.split("\n").map((line) => {
+    const match = /^(#{2,4})\s+(.+?)\s*$/.exec(line);
+    if (!match) return line;
+
+    const level = match[1].length;
+    const index = level - 2;
+    counters[index] += 1;
+    for (let i = index + 1; i < counters.length; i += 1) counters[i] = 0;
+
+    const number = counters.slice(0, index + 1).filter((value) => value > 0).join(".");
+    const clean = match[2].replace(/^\d+(?:\.\d+)*\.?\s+/, "").trim();
+    return match[1] + " " + number + ". " + clean;
+  }).join("\n");
 }
 
 export function extractToc(markdown: string): TocItem[] {
   const slugger = new GithubSlugger();
-  return markdown
+  const numbered = numberWikiHeadings(markdown);
+
+  return numbered
     .split("\n")
     .map((line) => {
       const match = /^(#{2,4})\s+(.+?)\s*$/.exec(line);
       if (!match) return null;
-      const text = match[2].replace(/\[(.*?)\]\(.*?\)/g, "$1").replace(/[*_`~]/g, "").trim();
-      return { level: match[1].length, text, id: slugger.slug(text) };
+
+      const rawText = match[2]
+        .replace(/\[(.*?)\]\(.*?\)/g, "$1")
+        .replace(/[*_~]/g, "")
+        .trim();
+      const numberMatch = /^(\d+(?:\.\d+)*)\.\s+/.exec(rawText);
+      const number = numberMatch ? numberMatch[1] : "";
+      const text = rawText.replace(/^\d+(?:\.\d+)*\.\s+/, "").trim();
+
+      return {
+        level: match[1].length,
+        text,
+        id: slugger.slug(rawText),
+        number,
+      };
     })
     .filter((item): item is TocItem => item !== null);
 }
 
 export async function renderMarkdown(markdown: string) {
   const notes: string[] = [];
-  const withNotes = markdown.replace(/\[각주:\s*([^\]]+)\]/g, (_, note) => {
+  const numbered = numberWikiHeadings(markdown);
+  const withNotes = numbered.replace(/\[각주:\s*([^\]]+)\]/g, (_, note) => {
     notes.push(String(note).trim());
-    return `[[${notes.length}]](#각주 "${String(note).replace(/"/g, "'")}")`;
+    return "[" + notes.length + "](#각주 " + JSON.stringify(String(note)) + ")";
   });
   const footnotes = notes.length
-    ? `\n\n## 각주\n\n${notes.map((note, index) => `${index + 1}. ${note}`).join("\n")}`
+    ? "\n\n## 각주\n\n" + notes.map((note, index) => String(index + 1) + ". " + note).join("\n")
     : "";
   const source = preprocessWikiLinks(withNotes + footnotes, getAllDocuments());
+
   const result = await unified()
     .use(remarkParse)
     .use(remarkGfm)
@@ -238,5 +271,5 @@ export async function renderMarkdown(markdown: string) {
 }
 
 export function githubEditUrl(slug: string) {
-  return `https://github.com/vividhyeok/wikiboutme/edit/main/content/${encodeURIComponent(slug)}.md`;
+  return "https://github.com/vividhyeok/wikiboutme/edit/main/content/" + encodeURIComponent(slug) + ".md";
 }
