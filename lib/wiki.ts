@@ -134,6 +134,16 @@ export function getWikiConfig(): WikiConfig {
   }
 }
 
+function normalizeDate(value: unknown) {
+  if (!value) return "";
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toISOString().slice(0, 10);
+  }
+  const text = String(value).trim();
+  const iso = /^\d{4}-\d{2}-\d{2}/.exec(text);
+  return iso ? iso[0] : text;
+}
+
 function stripMarkdown(markdown: string) {
   return markdown
     .replace(/\x60{3}[\s\S]*?\x60{3}/g, " ")
@@ -162,7 +172,7 @@ export function getAllDocuments(): WikiDocument[] {
         description: String(data.description || ""),
         category: String(data.category || "기타"),
         order: Number(data.order ?? 999),
-        updated: String(data.updated || ""),
+        updated: normalizeDate(data.updated),
         aliases: Array.isArray(data.aliases) ? data.aliases.map(String) : [],
         content,
         excerpt: plain.slice(0, 220),
@@ -245,7 +255,20 @@ export function extractToc(markdown: string): TocItem[] {
     .filter((item): item is TocItem => item !== null);
 }
 
-export async function renderMarkdown(markdown: string) {
+function decorateHeadings(html: string, editUrl?: string) {
+  return html.replace(/<(h[2-4]) id="([^"]+)">([\s\S]*?)<\/\1>/g, (_, tag, id, body) => {
+    const decoratedBody = String(body).replace(
+      /(<a[^>]*>)(\d+(?:\.\d+)*\.)(\s*)/,
+      '$1<span class="section-number">$2</span>$3'
+    );
+    const edit = editUrl
+      ? '<a class="section-edit" href="' + editUrl + '" target="_blank" rel="noreferrer">[편집]</a>'
+      : "";
+    return '<' + tag + ' id="' + id + '"><span class="section-toggle" aria-hidden="true">⌄</span>' + decoratedBody + edit + '</' + tag + '>';
+  });
+}
+
+export async function renderMarkdown(markdown: string, editUrl?: string) {
   const notes: string[] = [];
   const numbered = numberWikiHeadings(markdown);
   const withNotes = numbered.replace(/\[각주:\s*([^\]]+)\]/g, (_, note) => {
@@ -267,7 +290,7 @@ export async function renderMarkdown(markdown: string) {
     .use(rehypeStringify)
     .process(source);
 
-  return String(result);
+  return decorateHeadings(String(result), editUrl);
 }
 
 export function githubEditUrl(slug: string) {
