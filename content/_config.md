@@ -10,7 +10,7 @@ appearance:
   roundedCorners: false
   compactLayout: true
 navigation:
-  showRecentChanges: false
+  showRecentChanges: true
   showCategories: true
   showSearch: true
   showSidebar: true
